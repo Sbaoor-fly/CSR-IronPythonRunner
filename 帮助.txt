@@ -1,6 +1,8 @@
 #——MCPYAPI——
 mc.runcmd(cmd)											
 //执行后台命令
+mc.MCCSAPIVERSION()
+//返回CSR版本
 mc.logout(msg)											
 //向控制台输出
 mc.getOnLinePlayers()									
