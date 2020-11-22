@@ -3,7 +3,7 @@ mc.runcmd(cmd)
 //执行后台命令
 mc.logout(msg)											
 //向控制台输出
-mc.getOnLinePlayers										
+mc.getOnLinePlayers()									
 //获取在线玩家
 mc.getPlayerAbilities(uuid)								
 //获取uuid对应玩家能力表
