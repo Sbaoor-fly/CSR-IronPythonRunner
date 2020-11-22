@@ -135,8 +135,8 @@ npccmd
 //dimensionid —— npc所在维度ID
 blockcmd
 //cmd —— 执行的命令
-//position —— npc所在位置
-//dimensionid —— npc所在维度ID
+//position —— 命令方块所在位置
+//dimensionid —— 命令方块所在维度ID
 //type —— 执行者类型
 //tickdelay —— 执行间隔
 
