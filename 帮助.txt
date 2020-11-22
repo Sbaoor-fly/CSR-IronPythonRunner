@@ -124,6 +124,21 @@ levelexplode
 //entityname—— 爆炸实体名称
 //position —— 爆炸所在位置
 //explodepower —— 爆炸强度
+//dimensionid —— 爆炸所在维度ID
+npccmd
+//npcname —— npc名称
+//actionid —— 选择项
+//actions —— 指令列表
+//position —— npc所在位置
+//entityid —— ncp实体id
+//entityname —— npc实体名称
+//dimensionid —— npc所在维度ID
+blockcmd
+//cmd —— 执行的命令
+//position —— npc所在位置
+//dimensionid —— npc所在维度ID
+//type —— 执行者类型
+//tickdelay —— 执行间隔
 
 #——调用外部库的方法——
 //首先引用clr
