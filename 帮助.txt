@@ -117,6 +117,13 @@ placeblock
 //position —— 方块所在位置
 //blockcount —— 方块数量
 //blockname —— 方块名字
+levelexplode
+//blockid —— 爆炸方块id
+//entityid —— 爆炸实体id
+//blockname —— 爆炸方块名称
+//entityname—— 爆炸实体名称
+//position —— 爆炸所在位置
+//explodepower —— 爆炸强度
 
 #——调用外部库的方法——
 //首先引用clr
