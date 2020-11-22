@@ -102,6 +102,19 @@ formselect
 //selected —— 选择项
 //uuid —— 玩家uuid
 //playername —— 玩家名称
+useitem
+//itemid —— 物品id
+//itemcount —— 物品数量
+//itemname —— 物品名字
+//itemaux —— 物品特殊值
+//playername —— 玩家名称
+//XYZ —— 玩家所在位置
+//position —— 方块所在位置
+placeblock
+//XYZ —— 玩家所在位置
+//position —— 方块所在位置
+//blockcount —— 方块数量
+//blockname —— 方块名字
 
 #——调用外部库的方法——
 //首先引用clr
