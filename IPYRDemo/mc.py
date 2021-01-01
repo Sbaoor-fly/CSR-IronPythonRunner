@@ -87,6 +87,6 @@ def setServerMotd(motd,isshow):
 def creatGUI():
     '''创建GUI对象'''
     pass
-def creatPlayerObject():
+def creatPlayerObject(uuid):
     '''创建玩家指针操作对象'''
     pass
