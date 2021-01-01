@@ -83,3 +83,10 @@ def sendText(uuid,msg):
 	pass
 def setServerMotd(motd,isshow):
 	'''设置服务器motd，isshow是一个bool值'''
+	pass
+def creatGUI():
+    '''创建GUI对象'''
+    pass
+def creatPlayerObject():
+    '''创建玩家指针操作对象'''
+    pass
