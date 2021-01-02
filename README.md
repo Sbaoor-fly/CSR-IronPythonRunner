@@ -7,7 +7,7 @@ Win版BDS下.Net IronPython扩展插件运行平台
 
 #### ipy插件使用方法
 
-把ipy27.zip放到BDS根目录，把ipy插件放到ipy文件夹即可
+把IronPython27.zip放到BDS根目录，把ipy插件放到ipy文件夹即可
 
 #### 开发API
 
