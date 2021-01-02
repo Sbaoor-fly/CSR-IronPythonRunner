@@ -90,3 +90,111 @@ def creatGUI():
 def creatPlayerObject(uuid):
     '''创建玩家指针操作对象'''
     pass
+
+
+'''load_name'''
+#xuid —— 玩家对应xuid
+#uuid ——玩家对应uuid
+#playername —— 玩家名称
+#ipport —— 玩家IP与端口
+'''player_left'''
+#xuid —— 玩家对应xuid
+#uuid ——玩家对应uuid
+#playername —— 玩家名称
+'''server_command'''
+#cmd —— 后台输入的指令
+'''attack'''
+#actorname —— 被攻击实体名称
+#playername ——攻击者名称
+#dimensionid —— 玩家所在维度ID
+#XYZ —— 玩家所处位置
+'''inputtext'''
+#msg —— 输入的文本
+#dimensionid —— 玩家所在维度ID
+#XYZ —— 玩家所在位置
+'''destoryblock'''
+#blockid —— 方块id
+#XYZ —— 玩家所在位置
+#position —— 方块所在位置
+#blockname —— 方块名称
+'''mobdie'''
+#scrname —— 伤害源名称
+#mobname —— 实体名称
+#dimensionid —— 生物所在维度ID
+#playername —— 若为玩家死亡则附带此项
+'''respawn'''
+#XYZ —— 玩家所在位置
+#dimensionid —— 玩家所在维度ID
+#playername —— 玩家名称
+'''inputcommand'''
+#cmd —— 玩家输入的指令
+#dimensionid —— 玩家所在维度ID
+#playername —— 玩家名称
+#XYZ —— 玩家所在位置
+'''equippedarm'''
+#itemid —— 物品id
+#itemcount —— 物品数量
+#itemname —— 物品名字
+#itemaux —— 物品特殊值
+#solt —— 操作格子
+#XYZ —— 玩家所在位置
+'''formselect'''
+#formid —— 表单id
+#selected —— 选择项
+#uuid —— 玩家uuid
+#playername —— 玩家名称
+'''useitem'''
+#itemid —— 物品id
+#itemcount —— 物品数量
+#itemname —— 物品名字
+#itemaux —— 物品特殊值
+#playername —— 玩家名称
+#XYZ —— 玩家所在位置
+#position —— 方块所在位置
+'''placeblock'''
+#XYZ —— 玩家所在位置
+#position —— 方块所在位置
+#blockid —— 方块id
+#blockname —— 方块名字
+#dimensionid —— 方块所在维度ID
+'''levelexplode'''
+#blockid —— 爆炸方块id
+#entityid —— 爆炸实体id
+#blockname —— 爆炸方块名称
+#entityname—— 爆炸实体名称
+#position —— 爆炸所在位置
+#explodepower —— 爆炸强度
+#dimensionid —— 爆炸所在维度ID
+'''npccmd'''
+#npcname —— npc名称
+#actionid —— 选择项
+#actions —— 指令列表
+#position —— npc所在位置
+#entityid —— ncp实体id
+#entityname —— npc实体名称
+#dimensionid —— npc所在维度ID
+'''pistonpush'''
+#targetposition —— 被推动的方块所在位置
+#targetblockid —— 被推动的方块id
+#targetblockname ——被推动的方块名称
+#dimensionid —— 活塞所在维度ID
+#blockid —— 活塞id
+#blockname —— 活塞名称
+'''blockcmd'''
+#cmd —— 执行的命令
+#position —— 命令方块所在位置
+#dimensionid —— 命令方块所在维度ID
+#type —— 执行者类型
+#tickdelay —— 执行间隔
+'''openchest'''
+#XYZ —— 玩家所在位置
+#position —— 箱子所在位置
+#blockid —— 箱子id
+#blockname —— 箱子名字
+#dimensionid —— 箱子所在维度ID
+'''closechest'''
+#XYZ —— 玩家所在位置
+#position —— 箱子所在位置
+#blockid —— 箱子id
+#blockname —— 箱子名字
+#dimensionid —— 箱子所在维度ID
