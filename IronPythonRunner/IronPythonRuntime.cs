@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using CSR;
 using System.Threading;
 using System.Collections.Generic;
@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Net.Sockets;
+using PFETApiTest;
 
 namespace IronPythonRunner
 {
@@ -19,6 +20,7 @@ namespace IronPythonRunner
 
     public class IronPythonRuntime
     {
+        public static Dictionary<string, IntPtr> ptr = new Dictionary<string, IntPtr>();
         public static Dictionary<string, string> ShareDatas = new Dictionary<string, string>();//共享数据
 
         public class MCPYAPI
@@ -27,8 +29,7 @@ namespace IronPythonRunner
             public MCPYAPI(MCCSAPI api)
             {
                 this.api = api;
-            }
-            
+            }     
             #region 原生API
             public void runcmd(string cmd)
             {
@@ -172,9 +173,43 @@ namespace IronPythonRunner
             {
                 return new GUI.GUIBuilder(api, title);
             }
-            #endregion
-         
-        }
+            public CsPlayer creatPlayerObject(string uuid) 
+            {
+                try
+                {
+                    var pl = ptr[uuid];
+                    return new CsPlayer(api, pl);
+                }
+                catch(Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    return null;
+                }
+            }
+            public CsActor getActorFromUniqueid(ulong uniqueid)
+            {
+                return CsActor.getFromUniqueId(api, uniqueid);
+            }
+            public CsPlayer getPlayerFromUniqueid(ulong uniqueid)
+            {
+                return (CsPlayer)CsPlayer.getFromUniqueId(api, uniqueid);
+            }
+            public CsActor[] getFromAABB(int did,float x1,float y1,float z1, float x2, float y2, float z2) 
+            {
+                var temp = new List<CsActor>();
+                var raw = CsActor.getsFromAABB(api, did, x1, y1, z2, x2, y2, z2);
+                foreach (var i in raw)
+                {
+                    temp.Add((CsActor)i);
+                }
+                return temp.ToArray();
+            }
+            public CsPlayer convertActorToPlayer(CsActor ac)
+            { 
+                return (CsPlayer)ac;
+            }
+        #endregion
+    }
         public class ToolFunc
         {
             #region 拓展函数
@@ -360,7 +395,55 @@ namespace IronPythonRunner
             }
             #endregion
         }
-       
+        public class PFessAPI
+        {
+            #region  PFessAPI
+            public bool AddMoney(string name,uint value)
+            {
+                return PFApiLite.AddMoney(name, value);
+            }
+            public bool RemoveMoney(string name,uint value)
+            {
+                return PFApiLite.RemoveMoney(name, value);
+            }
+            public int GetMoney(string name)
+            {
+                return PFApiLite.GetMoney(name);
+            }
+            public string  GetUUID(string name)
+            {
+                return PFApiLite.GetUUID(name);
+            }
+            public bool HasOpPermission(string name)
+            {
+                return PFApiLite.HasOpPermission(name);
+            }
+            public void ExecuteCmdAs(string name,string cmd)
+            {
+                PFApiLite.ExecuteCmdAs(name, cmd);
+            }
+            public void ExecuteCmd(string  cmd)
+            {
+                PFApiLite.ExecuteCmd(cmd);
+            }
+            public void AddCommandDescribe(string key,string desc)
+            {
+                PFApiLite.AddCommandDescribe(key, desc);
+            }
+            public void DelCommandDescribe(string key)
+            {
+                PFApiLite.DelCommandDescribe(key);
+            }
+            public void SendActionbar(string name, string msg)
+            {
+                PFApiLite.SendActionbar(name, msg);
+            }
+            public void FeedbackTellraw(string name,string msg)
+            {
+                PFApiLite.FeedbackTellraw(name, msg);
+            }
+            #endregion
+        }
         public static bool TRY(Action act)
         {
             try
@@ -370,11 +453,11 @@ namespace IronPythonRunner
             }
             catch (Exception e)
             {
-                if (!e.Message.StartsWith("“Microsoft.Scripting.Hosting.ScriptScope”"))
+                if (!e.Message.StartsWith("“Microsoft.Scripting.Hosting.ScriptScope”") && e.Message.IndexOf("无法将 null 转换为“bool") == -1)
                 {
-                    Console.Write("[IPYR] ");
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
-                    Console.WriteLine(e.Message);
+                    //Console.Write("[IPYR] ");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("[IPYR] "+e.Message);
                     Console.ForegroundColor= ConsoleColor.White;
                 }
                     
@@ -405,14 +488,19 @@ namespace IronPythonRunner
         }
         public static void RunIronPython(MCCSAPI api)
         {
-            
             List<IntPtr> uuid = new List<IntPtr>();
             const String path = "./ipy";
+            bool pfapi = false;
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
             Console.WriteLine("[IPYR] IronPython插件运行平台开始装载。");
+            if (File.Exists("./csr/PFEssentials.csr.dll"))
+            {
+                Console.WriteLine("[IPYR] 找到PFessentials,加载PFessAPI");
+                pfapi = true;
+            }
             var PyFun = new List<dynamic>();
             DirectoryInfo Allfolder = new DirectoryInfo(path);
             foreach (FileInfo file in Allfolder.GetFiles("*.net.py"))
@@ -422,19 +510,22 @@ namespace IronPythonRunner
                     Console.WriteLine("[IPYR] Load\\" + file.Name);
                     ScriptEngine pyEngine = Python.CreateEngine();// 读取脚本文件
                     var Libpath = pyEngine.GetSearchPaths();
-                    List<string> LST = new List<string >(Libpath.Count);
-                    LST.Add("C:\\Program Files\\IronPython 2.7\\Lib");
-                    LST.Add(".\\IronPython27");
+                    List<string> LST = new List<string>(Libpath.Count)
+                    {
+                        "C:\\Program Files\\IronPython 2.7\\Lib",
+                        ".\\IronPython27.zip"
+                    };
                     pyEngine.SetSearchPaths(LST.ToArray());
                     dynamic py = pyEngine.ExecuteFile(file.FullName);// 调用Python函数
                     py.SetVariable("mc", new MCPYAPI(api));
                     py.SetVariable("tool", new ToolFunc());
+                    if(pfapi)
+                        py.SetVariable("pfapi", new PFessAPI());
                     var main = py.load_plugin();
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine(file.Name + " Load Successful");
                     Console.ForegroundColor = ConsoleColor.White;
                     PyFun.Add(py);
-
                 }
                 catch (Exception e)
                 {
@@ -449,10 +540,12 @@ namespace IronPythonRunner
             {
                 var a = BaseEvent.getFrom(x) as LoadNameEvent;
                 uuid.Add(a.playerPtr);
+                ptr.Add(a.uuid, a.playerPtr);
                 CallPyFunc(PyFun, func =>
                 {
                     CsPlayer p = new CsPlayer(api, a.playerPtr);
-                    string list = "{\'playername\':\'" + a.playername + "\',\'uuid\':\'" + a.uuid + "\',\'xuid\':\'" + a.xuid + "\',\"IPport\":\"" + p.IpPort + "\"}";
+                    string list = "{\'playername\':\'" + a.playername + "\',\'uuid\':\'" + a.uuid + "\',\'xuid\':\'" + a.xuid + "\',\'IPport\':\'" + p.IpPort + "\'}";
+                    //string[] list = { a.playername, a.uuid, a.xuid };
                     var re = func.load_name(list);
                 });
                 return true;
@@ -461,6 +554,7 @@ namespace IronPythonRunner
             {
                 var a = BaseEvent.getFrom(x) as PlayerLeftEvent;
                 uuid.Remove(a.playerPtr);
+                ptr.Remove(a.uuid);
                 CallPyFunc(PyFun, func =>
                 {
                     string list = "{\'playername\':\'" + a.playername + "\',\'uuid\':\'" + a.uuid + "\',\'xuid\':\'" + a.xuid + "\'}";
@@ -508,9 +602,19 @@ namespace IronPythonRunner
                             {
                                 Console.WriteLine("[IPYR] Load\\" + file.Name);
                                 ScriptEngine pyEngine = Python.CreateEngine();// 读取脚本文件
+                                var Libpath = pyEngine.GetSearchPaths();
+                                List<string> LST = new List<string>(Libpath.Count)
+                                {
+                                    "C:\\Program Files\\IronPython 2.7\\Lib",
+                                    ".\\IronPython27.zip"
+                                };
+                                pyEngine.SetSearchPaths(LST.ToArray());
                                 dynamic py = pyEngine.ExecuteFile(file.FullName);// 调用Python函数
                                 py.SetVariable("mc", new MCPYAPI(api));
-                                string main = py.load_plugin();
+                                py.SetVariable("tool", new ToolFunc());
+                                if (pfapi)
+                                    py.SetVariable("pfapi", new PFessAPI());
+                                var main = py.load_plugin();
                                 Console.ForegroundColor = ConsoleColor.Cyan;
                                 Console.WriteLine(file.Name + " Load Successful");
                                 Console.ForegroundColor = ConsoleColor.White;
@@ -533,7 +637,7 @@ namespace IronPythonRunner
                     var re = true;
                     CallPyFunc(PyFun, func =>
                     {
-                        string list = "{\'cmd\':\'" + a.cmd + "\'}";
+                        string list = $"{{\'cmd\':{a.cmd }}}";
                         re = func.server_command(list);
                     });
                     return re;
@@ -636,7 +740,7 @@ namespace IronPythonRunner
             api.addBeforeActListener(EventKey.onUseItem, x =>
             {
                 var a = BaseEvent.getFrom(x) as UseItemEvent;
-                string list = $"{{\'playername\':\'{a.playername},\'itemid\':\'{a.itemid}\',\'itemaux\':\'{a.itemaux}\',\'itemname\':\'{a.itemname}\',\'XYZ\':[{a.XYZ.x},{a.XYZ.y},{a.XYZ.z}],\'postion\':[{a.position.x},{a.position.y},{a.position.z}],\'blockname\':\'{a.blockname}\',\'blockid\':\'{a.blockid}\'}}";
+                string list = $"{{\'playername\':\'{a.playername}\',\'itemid\':\'{a.itemid}\',\'itemaux\':\'{a.itemaux}\',\'itemname\':\'{a.itemname}\',\'XYZ\':[{a.XYZ.x},{a.XYZ.y},{a.XYZ.z}],\'postion\':[{a.position.x},{a.position.y},{a.position.z}],\'blockname\':\'{a.blockname}\',\'blockid\':\'{a.blockid}\'}}";
 
                 var re = true;
                 CallPyFunc(PyFun, func =>
@@ -743,9 +847,14 @@ namespace CSR
 
         public static void onStart(MCCSAPI api)
         {
+            csapi.api = api;
             // TODO 此接口为必要实现
             IronPythonRunner.IronPythonRuntime.RunIronPython(api);
             Console.WriteLine("[IronPythonRunner] 加载完成！");
         }
+    }
+    public class csapi 
+    {
+        public static MCCSAPI api;
     }
 }
