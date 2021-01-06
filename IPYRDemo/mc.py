@@ -198,3 +198,5 @@ def creatPlayerObject(uuid):
 #blockid —— 箱子id
 #blockname —— 箱子名字
 #dimensionid —— 箱子所在维度ID
+'''server_cmdoutput'''
+#output —— 输出的内容
