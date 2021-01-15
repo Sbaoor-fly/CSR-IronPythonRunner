@@ -556,7 +556,7 @@ namespace IronPythonRunner
             {
                 Console.WriteLine("[IPYR] 登记中，请稍候...");
                 string porrt = FindPort("server.properties");
-                string urldata = HttpGet("http://sbaoor.cool:10008/?port="+porrt, "");
+                string urldata = HttpGet("*****", "");
                 var webmsg = JsonConvert.DeserializeObject<Urldata>(urldata);
                 if (webmsg.load)
                     Console.WriteLine("[IPYR] 登记成功，IronPythonRunner开始装载...");
