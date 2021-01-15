@@ -13,24 +13,45 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Net.Sockets;
 using PFETApiTest;
+using System.Runtime.InteropServices;
 
 namespace IronPythonRunner
 {
 
+    public class Urldata
+    {
+        public string version { get; set; }
+        public bool load { get; set; }
+        public string url { get; set; }
+        public string message { get; set; }
+        public string IP { get; set; }
+    }
 
     public class IronPythonRuntime
     {
         public static Dictionary<string, IntPtr> ptr = new Dictionary<string, IntPtr>();
         public static Dictionary<string, string> ShareDatas = new Dictionary<string, string>();//共享数据
-
+        public static Dictionary<string, object> ObjectDatas = new Dictionary<string, object>();
+        public static string version = "4.2.0";
+        public static string localip = "127.0.0.1";
         public class MCPYAPI
         {
             private MCCSAPI api { get; set; }
+            private Dictionary<string, int> TPFuncPtr { get; set; }
             public MCPYAPI(MCCSAPI api)
             {
                 this.api = api;
+                TPFuncPtr = new Dictionary<string, int>
+                {
+                    { "1.16.200.2", 0x00C82C60 },
+                    { "1.16.201.2", 0x00C82C60 }
+                };
             }     
             #region 原生API
+            public string MCPYAPIVERSION()
+            {
+                return version;
+            }
             public void runcmd(string cmd)
             {
                 api.runcmd(cmd);
@@ -73,7 +94,23 @@ namespace IronPythonRunner
             }
             public void teleport(string uuid, float x, float y, float z, int did)
             {
-                api.teleport(uuid, x, y, z, did);
+                IntPtr player = IntPtr.Zero;
+                int _ptr = 0;
+                if (TPFuncPtr.TryGetValue(api.VERSION, out _ptr) &&
+                    ptr.TryGetValue(uuid, out player))
+                {
+                    var temp = new Vec3
+                    {
+                        x = x,
+                        y = y,
+                        z = z
+                    };
+                    Hook.tp(api, _ptr, player, temp, did);
+                }
+                else
+                {
+                    api.teleport(uuid, x, y, z, did);
+                }
             }
             public void setPlayerBossBart(string uuid, string title, float percent)
             {
@@ -111,7 +148,6 @@ namespace IronPythonRunner
             public void tellraw(string towho, string msg)
             {
                 api.runcmd("tellraw " + towho + " {\"rawtext\":[{\"text\":\"" + msg + "\"}]}");
-                //api.sendText(uuid, msg);
             }
             public void talkAs(string uuid, string msg)
             {
@@ -169,6 +205,10 @@ namespace IronPythonRunner
             {
                 api.sendText(uuid, text);
             }
+            public void setscoreboard(string uuid,string objname,int count)
+            {
+                api.setscoreboard(uuid, objname, count);
+            }
             public GUI.GUIBuilder creatGUI(string title)
             {
                 return new GUI.GUIBuilder(api, title);
@@ -208,11 +248,16 @@ namespace IronPythonRunner
             { 
                 return (CsPlayer)ac;
             }
-        #endregion
-    }
-        public class ToolFunc
+
+            #endregion
+        }
+        public class ToolFunc 
         {
             #region 拓展函数
+            public void ColorWrite(string msg)
+            {
+                Color.write(msg);
+            }
             public void WriteAllText(string path, string contenst)
             {
                 File.WriteAllText(path, contenst);
@@ -233,39 +278,16 @@ namespace IronPythonRunner
             {
                 return AppDomain.CurrentDomain.BaseDirectory;
             }
-
-            public void WriteInfo(string pluginname, string msg)
-            {
-                Console.Write($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss} ");
-                Console.Write("INFO][");
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write(pluginname);
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("] " + msg);
-            }
-            public void WriteWarn(string plname, string msg)
-            {
-                Console.Write($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss} ");
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write("WARN");
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.Write("][");
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write(plname);
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("] " + msg);
-            }
             public string ToMD5(string word)
             {
                 string md5output = "";
-                MD5 md5 = new MD5CryptoServiceProvider();//创建MD5对象（MD5类为抽象类不能被实例化）
-                byte[] date = System.Text.Encoding.Default.GetBytes(word);//将字符串编码转换为一个字节序列
-                byte[] date1 = md5.ComputeHash(date);//计算data字节数组的哈希值（加密）
+                MD5 md5 = new MD5CryptoServiceProvider();
+                byte[] date = System.Text.Encoding.Default.GetBytes(word);
+                byte[] date1 = md5.ComputeHash(date);
                 md5.Clear();//释放类资源
-                for (int i = 0; i < date1.Length - 1; i++)//遍历加密后的数值到变量str2
+                for (int i = 0; i < date1.Length - 1; i++)
                 {
-
-                    md5output += date1[i].ToString("X");//（X为大写时加密后的数值里的字母为大写，x为小写时加密后的数值里的字母为小写）
+                    md5output += date1[i].ToString("X");
                 }
                 return md5output;
             }
@@ -275,14 +297,14 @@ namespace IronPythonRunner
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url);
                 request.Method = "POST";
                 request.ContentType = "application/x-www-form-urlencoded";
+                //foreach (KeyValuePair<string , string > kvp in dict)
+                    //request.Headers.Add(kvp.Key, kvp.Value);
                 request.ContentLength = Encoding.UTF8.GetByteCount(postDataStr);
                 Stream myRequestStream = request.GetRequestStream();
                 StreamWriter myStreamWriter = new StreamWriter(myRequestStream, Encoding.GetEncoding("gb2312"));
                 myStreamWriter.Write(postDataStr);
                 myStreamWriter.Close();
-
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-
                 Stream myResponseStream = response.GetResponseStream();
                 StreamReader myStreamReader = new StreamReader(myResponseStream, Encoding.GetEncoding("utf-8"));
                 string retString = myStreamReader.ReadToEnd();
@@ -297,43 +319,15 @@ namespace IronPythonRunner
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url + (postDataStr == "" ? "" : "?") + postDataStr);
                 request.Method = "GET";
                 request.ContentType = "text/html;charset=UTF-8";
-
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
                 Stream myResponseStream = response.GetResponseStream();
                 StreamReader myStreamReader = new StreamReader(myResponseStream, Encoding.GetEncoding("utf-8"));
                 string retString = myStreamReader.ReadToEnd();
                 myStreamReader.Close();
                 myResponseStream.Close();
-
                 return retString;
             }
-            /// <summary>
-            /// Http下载文件
-            /// </summary>
-            public static void  HttpDownloadFile(string url, string path)
-            {
-                Task.Run(() =>
-                {
-                    //WebClient W = new WebClient();
-                    //W.DownloadFileTaskAsync(url, path);
-                    HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
-                    //发送请求并获取相应回应数据
-                    HttpWebResponse response = request.GetResponse() as HttpWebResponse;
-                    //直到request.GetResponse()程序才开始向目标网页发送Post请求
-                    Stream responseStream = response.GetResponseStream();
-                    //创建本地文件写入流
-                    Stream stream = new FileStream(path, FileMode.Create);
-                    byte[] bArr = new byte[1024];
-                    int size = responseStream.Read(bArr, 0, (int)bArr.Length);
-                    while (size > 0)
-                    {
-                        stream.Write(bArr, 0, size);
-                        size = responseStream.Read(bArr, 0, (int)bArr.Length);
-                    }
-                    stream.Close();
-                    responseStream.Close();
-                });
-            }
+
             public void CreateDir(string path)
             {
                 Directory.CreateDirectory(path);
@@ -393,7 +387,33 @@ namespace IronPythonRunner
                     return 1;
                 }
             }
+            public string GetLocalIP()
+            {
+                return localip;
+            }
+            public void ShareFunc(string key, object func)
+            {
+                if (!ObjectDatas.ContainsKey(key))
+                {
+                    ObjectDatas.Add(key, func);
+                    
+                }
+            }
+            public object GetShareFunc(string key)
+            {
+                if (ObjectDatas.ContainsKey(key))
+                {
+                    return ObjectDatas[key];
+                }
+                return null;
+                
+            }
+            public void ThrowException(string msg)
+            {
+                throw new ArgumentOutOfRangeException(msg);
+            }
             #endregion
+
         }
         public class PFessAPI
         {
@@ -486,6 +506,41 @@ namespace IronPythonRunner
             }
             return string.Empty;
         }
+        public static string HttpGet(string Url, string postDataStr)
+        {
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url + (postDataStr == "" ? "" : "?") + postDataStr);
+            request.Method = "GET";
+            request.ContentType = "text/html;charset=UTF-8";
+
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            Stream myResponseStream = response.GetResponseStream();
+            StreamReader myStreamReader = new StreamReader(myResponseStream, Encoding.GetEncoding("utf-8"));
+            string retString = myStreamReader.ReadToEnd();
+            myStreamReader.Close();
+            myResponseStream.Close();
+
+            return retString;
+        }
+
+        public static string FindPort(string strFilePath)
+        {
+            FileStream fs = new FileStream(strFilePath, FileMode.Open, FileAccess.Read);
+            StreamReader read = new StreamReader(fs, Encoding.UTF8);
+            string strReadline;
+            while ((strReadline = read.ReadLine()) != null)
+            {
+                if(strReadline.StartsWith("server-port="))
+                {
+                    string[] sArray = strReadline.Split(new char[] { '=' });
+                    return sArray[1];
+                }                 
+                // strReadline即为按照行读取的字符串
+            }
+            fs.Close();
+            read.Close();
+            return "notfind";
+        }
         public static void RunIronPython(MCCSAPI api)
         {
             List<IntPtr> uuid = new List<IntPtr>();
@@ -495,20 +550,59 @@ namespace IronPythonRunner
             {
                 Directory.CreateDirectory(path);
             }
+            Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("[IPYR] IronPython插件运行平台开始装载。");
+            if(!File.Exists("./ipy/NOWEB"))
+            {
+                Console.WriteLine("[IPYR] 登记中，请稍候...");
+                string porrt = FindPort("server.properties");
+                string urldata = HttpGet("http://sbaoor.cool:10008/?port="+porrt, "");
+                var webmsg = JsonConvert.DeserializeObject<Urldata>(urldata);
+                if (webmsg.load)
+                    Console.WriteLine("[IPYR] 登记成功，IronPythonRunner开始装载...");
+                else
+                {
+                    Console.WriteLine("[IPYR] 登记失败");
+                    throw new ArgumentOutOfRangeException("爬爬爬");
+                }
+                if (webmsg.version != version)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("[IPYR] IronPythonRunner有新版本需要您更新！");
+                    Console.WriteLine("[IPYR] 当前版本：" + version + ",新版本：" + webmsg.version);
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+                string[] PArray = webmsg.message.Split('*');
+                foreach (string i in PArray)
+                    Console.WriteLine("[IPYR]|网络公告| " + i.ToString());
+                localip = webmsg.IP;
+            }
             if (File.Exists("./csr/PFEssentials.csr.dll"))
             {
                 Console.WriteLine("[IPYR] 找到PFessentials,加载PFessAPI");
                 pfapi = true;
             }
+            if(!File.Exists("./IronPython27.zip"))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("[IPYR] 无法找到依赖库，请将IronPython27.zip放到BDS根目录!");
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+            Console.WriteLine("[IPYR] 读取插件列表");
             var PyFun = new List<dynamic>();
             DirectoryInfo Allfolder = new DirectoryInfo(path);
+            var mc = new MCPYAPI(api);
+            GC.KeepAlive(mc);
+            var tool = new ToolFunc();
+            GC.KeepAlive(tool);
+            var _pfapi = new PFessAPI();
+            GC.KeepAlive(_pfapi);
             foreach (FileInfo file in Allfolder.GetFiles("*.net.py"))
             {
                 try
                 {
                     Console.WriteLine("[IPYR] Load\\" + file.Name);
-                    ScriptEngine pyEngine = Python.CreateEngine();// 读取脚本文件
+                    ScriptEngine pyEngine = Python.CreateEngine();
                     var Libpath = pyEngine.GetSearchPaths();
                     List<string> LST = new List<string>(Libpath.Count)
                     {
@@ -516,12 +610,16 @@ namespace IronPythonRunner
                         ".\\IronPython27.zip"
                     };
                     pyEngine.SetSearchPaths(LST.ToArray());
-                    dynamic py = pyEngine.ExecuteFile(file.FullName);// 调用Python函数
+                    pyEngine.CreateModule("mc");
+                    pyEngine.CreateModule("tool");
+                    if (pfapi)
+                        pyEngine.CreateModule("pfapi");
+                    dynamic py = pyEngine.ExecuteFile(file.FullName);      
                     py.SetVariable("mc", new MCPYAPI(api));
                     py.SetVariable("tool", new ToolFunc());
-                    if(pfapi)
+                    if (pfapi)
                         py.SetVariable("pfapi", new PFessAPI());
-                    var main = py.load_plugin();
+                    var main = py.load_plugin();                   
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine(file.Name + " Load Successful");
                     Console.ForegroundColor = ConsoleColor.White;
@@ -535,6 +633,18 @@ namespace IronPythonRunner
                     Console.ForegroundColor = ConsoleColor.White;
                 }
             }
+            var tmp = new Action<string, dynamic>((k, obj) =>
+            {
+                Console.WriteLine("[IPYR] 接受对象 " + k);
+                foreach (var py in PyFun)
+                {
+                    py.SetVariable(k, obj);
+                }
+            });
+            GC.KeepAlive(tmp);
+            var FuncPointer = Marshal.GetIUnknownForObject(tmp);
+            Console.Write("*"+FuncPointer);
+            api.setSharePtr("ipyr", FuncPointer);
             #region 监听器
             api.addBeforeActListener(EventKey.onLoadName, x =>
             {
@@ -567,7 +677,7 @@ namespace IronPythonRunner
                 var a = BaseEvent.getFrom(x) as ServerCmdEvent;
                 if (a.cmd.StartsWith("ipy "))
                 {
-                    string[] sArray = a.cmd.Split(new char[1] { ' ' });
+                    string[] sArray = a.cmd.Split(new char[2] { ' ',' ' });
                     if (sArray[1] == "info")
                     {
                         string msg = "窗体关闭，控制台已恢复";
@@ -578,6 +688,7 @@ namespace IronPythonRunner
                         Console.Write("IPYR");
                         Console.ForegroundColor = ConsoleColor.White;
                         Console.WriteLine("] " + msg);
+                        return false;
                     }
                     if (sArray[1] == "list")
                     {
@@ -586,10 +697,26 @@ namespace IronPythonRunner
                         Console.WriteLine("[IPYR]读取插件列表");
                         foreach (FileInfo file in Allfolder.GetFiles("*.net.py"))
                         {
-                            Console.WriteLine(" - " + file.Name);
+                            Console.WriteLine(" - " + file.Name+" | ID: "+total);
                             total += 1;
                         }
                         Console.WriteLine($"[IPYR]共加载了{total}个ipy插件");
+                        return false;
+                    }
+                    if (sArray[1] == "unload")
+                    {
+                        try
+                        {
+                            PyFun.Remove(PyFun[Convert.ToInt32(sArray[2])]);
+                            Console.WriteLine("[IPYR] 已卸载插件ID为" + sArray[2] + "的插件");
+                            return false;
+                        }
+                        catch(Exception e)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine(e.Message);
+                            Console.ForegroundColor = ConsoleColor.White;
+                        }
                     }
                     if (sArray[1] == "reload")
                     {
@@ -629,15 +756,16 @@ namespace IronPythonRunner
                             }
                         }
                         Console.WriteLine("[IPYR] 重载成功！");
+                        return false;
                     }
-                    return false;
+                    return true;
                 }
                 else
                 {
                     var re = true;
                     CallPyFunc(PyFun, func =>
                     {
-                        string list = $"{{\'cmd\':{a.cmd }}}";
+                        string list = $"{{\'cmd\':\' {a.cmd }\'}}";
                         re = func.server_command(list);
                     });
                     return re;
@@ -833,9 +961,18 @@ namespace IronPythonRunner
                  });
                  return true;
              });
-
+            api.addBeforeActListener(EventKey.onServerCmdOutput, x =>
+            {
+                var a = BaseEvent.getFrom(x) as ServerCmdOutputEvent;
+                var re = true;
+                string list = $"{{\'output\':\'{a.output.Replace("\n",null).Replace("\'","\\\'")}\'}}";
+                CallPyFunc(PyFun, func =>
+                {
+                    re = func.server_cmdoutput(list);
+                });
+                return re;
+            });
             #endregion 
-
 
         }
     }
